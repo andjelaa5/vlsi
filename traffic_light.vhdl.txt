@@ -1,0 +1,107 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity traffic_light is
+    port ( 
+        clk                : in std_logic;
+        reset              : in std_logic;
+        rc, gc, yc, rp, gp : out std_logic
+    );
+end traffic_light;
+
+architecture Behavioral of traffic_light is
+    type State_t is (redRed1, redGreen, redRed2, redYellowRed, greenRed, yellowRed);
+    constant C_DURATION : integer := 1;
+    signal state_reg, next_state : State_t;
+    signal counter : integer range 0 to 72 * C_DURATION := 0;
+begin
+    
+  
+    STATE_TRANSITION: process (clk) is
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                state_reg <= redRed1;
+            else
+                state_reg <= next_state;
+            end if;        
+        end if;
+    end process STATE_TRANSITION;
+
+
+    CNT_PROCESS: process (clk) is
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                counter <= 0;
+            elsif state_reg /= next_state then
+                counter <= 0; 
+            else
+                counter <= counter + 1;
+            end if;
+        end if;
+    end process CNT_PROCESS;
+
+  
+    NEXT_STATE_LOGIC: process (state_reg, counter) is
+    begin
+        next_state <= state_reg; 
+        case state_reg is
+            when redRed1 => 
+                if counter = 16*C_DURATION-1 then
+                    next_state <= redGreen;
+                end if;
+            when redGreen => 
+                if counter = 56*C_DURATION-1 then
+                    next_state <= redRed2;
+                end if;
+            when redRed2 => 
+                if counter = 16*C_DURATION-1 then
+                    next_state <= redYellowRed;
+                end if;
+            when redYellowRed => 
+                if counter = 8*C_DURATION-1 then
+                    next_state <= greenRed;
+                end if;
+            when greenRed => 
+                if counter = 72*C_DURATION-1 then
+                    next_state <= yellowRed;
+                end if;
+            when yellowRed => 
+                if counter = 8*C_DURATION-1 then
+                    next_state <= redRed1;
+                end if;               
+        end case;
+    end process NEXT_STATE_LOGIC;
+
+    OUT_LOGIC: process (state_reg) is
+    begin
+        rc <= '0';
+        yc <= '0';
+        gc <= '0';
+        rp <= '0';
+        gp <= '0';
+        case state_reg is
+            when redRed1 =>
+                rc <= '1'; 
+                rp <= '1'; 
+            when redGreen =>
+                rc <= '1'; 
+                gp <= '1';
+            when redRed2 =>
+                rc <= '1';  
+                rp <= '1'; 
+            when redYellowRed =>
+                rc <= '1'; 
+                yc <= '1'; 
+                rp <= '1'; 
+            when greenRed =>
+                gc <= '1'; 
+                rp <= '1'; 
+            when yellowRed =>
+                yc <= '1'; 
+                rp <= '1'; 
+        end case;
+    end process OUT_LOGIC;    
+
+end Behavioral;
